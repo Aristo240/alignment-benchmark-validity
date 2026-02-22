@@ -1,0 +1,7 @@
+Contrast,A,B,Paired,Parametric,dof,alternative,p-adjust,BF10,hedges
+condition,A_evaluation_explicit,B_deployment_explicit,True,True,147.0,two-sided,bonf,nan,0.0
+condition,A_evaluation_explicit,C_neutral,True,True,147.0,two-sided,bonf,nan,0.0
+condition,A_evaluation_explicit,D_counter_signal,True,True,147.0,two-sided,bonf,nan,0.0
+condition,B_deployment_explicit,C_neutral,True,True,147.0,two-sided,bonf,nan,0.0
+condition,B_deployment_explicit,D_counter_signal,True,True,147.0,two-sided,bonf,nan,0.0
+condition,C_neutral,D_counter_signal,True,True,147.0,two-sided,bonf,nan,0.0

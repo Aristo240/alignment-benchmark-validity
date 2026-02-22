@@ -1,0 +1,2 @@
+comparison,mean_a,mean_b,mean_diff,pooled_sd,cohens_d,n_a,n_b
+A_evaluation_explicit vs B_deployment_explicit,0.9865,0.9865,0.0,0.1159,0.0,148,148
