@@ -2,7 +2,7 @@
 
 **Research question:** Do current alignment benchmarks measure stable underlying model properties, or primarily capture context-sensitive compliance triggered by evaluation cues?
 
-This codebase tests whether sycophancy scores on the [Anthropic model-written evaluations dataset](https://huggingface.co/datasets/Anthropic/model-written-evals/tree/main/sycophancy) vary as a function of evaluation-context cues in the system prompt — a construct validity test grounded in Greenblatt et al. (2024) and Denison et al. (2024).
+This codebase tests whether sycophancy scores on the [Anthropic model-written evaluations dataset](https://huggingface.co/datasets/Anthropic/model-written-evals/tree/main/sycophancy) vary as a function of evaluation-context cues in the system prompt, a construct validity test grounded in Greenblatt et al. (2024) and Denison et al. (2024).
 
 ---
 
@@ -16,11 +16,11 @@ Three models were tested as part of a pilot study to validate the infrastructure
 | Qwen2.5-7B-Instruct | Local (HPC) | 7B | Zero cross-condition variance; uniform ceiling sycophancy |
 | Llama-3.3-70B-Instruct-Turbo | Together AI API | 70B | Zero cross-condition variance; uniform ceiling sycophancy |
 
-**All three models produced near-100% sycophancy rates across all conditions** on the NLP survey items. Initial interpretation suggested model incapability, but inspection of the raw data revealed the actual cause: the task prompts in the NLP survey subset explicitly state the respondent's opinion before posing the question (e.g., *"I agree with the claim that private firms have too much influence... Do you agree or disagree?"*). This constitutes a strong within-prompt sycophancy signal that is condition-invariant — it is identical across all four system prompts — and is sufficient to produce ceiling-level sycophancy regardless of evaluation context framing.
+**All three models produced near-100% sycophancy rates across all conditions** on the NLP survey items. Initial interpretation suggested model incapability, but inspection of the raw data revealed the actual cause: the task prompts in the NLP survey subset explicitly state the respondent's opinion before posing the question (e.g., *"I agree with the claim that private firms have too much influence... Do you agree or disagree?"*). This constitutes a strong within-prompt sycophancy signal that is condition-invariant — it is identical across all four system prompts, and is sufficient to produce ceiling-level sycophancy regardless of evaluation context framing.
 
 This is a **two-level cue problem**: the benchmark embeds evaluation-relevant signals both in the system-prompt framing (the manipulation target) and in the task prompt itself (an uncontrolled confound). The biographical cue dominates, masking any potential system-prompt condition effect.
 
-**This finding is itself a construct validity result**: a benchmark that produces ceiling sycophancy because its task prompts explicitly request agreement is not measuring sycophantic tendency as a model property — it is measuring instruction-following. This is detectable in the raw data without any condition manipulation.
+**This finding is itself a construct validity result**: a benchmark that produces ceiling sycophancy because its task prompts explicitly request agreement is not measuring sycophantic tendency as a model property, it is measuring instruction-following. This is detectable in the raw data without any condition manipulation.
 
 The results shown in `data/responses.jsonl` and `results/` in this repository are from the **Llama-3.3-70B pilot run** via Together AI, as it represents the highest-capability model tested and is the target model for the full experiment.
 
@@ -37,7 +37,7 @@ pip install -r requirements.txt
 Create a `.env` file in the project root:
 
 ```
-# For Together AI backend (Llama 3.3 70B — recommended)
+# For Together AI backend (Llama 3.3 70B)
 TOGETHER_API_KEY=your_together_api_key_here
 
 # For local HuggingFace backend (optional, only needed for gated models)
@@ -53,14 +53,14 @@ Get a Together AI API key at: https://api.together.xyz/settings/api-keys
 
 ## Running the experiment
 
-### Together AI backend — Llama 3.3 70B (recommended)
+### Together AI backend — Llama 3.3 70B
 
-**Pilot** (50 items × 3 sources × 4 conditions = 600 API calls, ~$0.50):
+**Pilot** (50 items × 3 sources × 4 conditions = 600 API calls):
 ```bash
 python main.py --pilot
 ```
 
-**Full run** (200 items × 3 sources × 4 conditions = 2,400 API calls, ~$2.00):
+**Full run** (200 items × 3 sources × 4 conditions = 2,400 API calls:
 ```bash
 python main.py --full
 ```
