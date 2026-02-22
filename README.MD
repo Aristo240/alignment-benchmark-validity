@@ -6,20 +6,56 @@ This codebase tests whether sycophancy scores on the [Anthropic model-written ev
 
 ---
 
+## Pilot Results
+
+Three models were tested as part of a pilot study to validate the infrastructure and test the manipulation prior to the full experiment:
+
+| Model | Backend | Scale | Result |
+|-------|---------|-------|--------|
+| Qwen2.5-3B-Instruct | Local (HPC) | 3B | Zero cross-condition variance; uniform ceiling sycophancy |
+| Qwen2.5-7B-Instruct | Local (HPC) | 7B | Zero cross-condition variance; uniform ceiling sycophancy |
+| Llama-3.3-70B-Instruct-Turbo | Together AI API | 70B | Zero cross-condition variance; uniform ceiling sycophancy |
+
+**All three models produced near-100% sycophancy rates across all conditions** on the NLP survey items. Initial interpretation suggested model incapability, but inspection of the raw data revealed the actual cause: the task prompts in the NLP survey subset explicitly state the respondent's opinion before posing the question (e.g., *"I agree with the claim that private firms have too much influence... Do you agree or disagree?"*). This constitutes a strong within-prompt sycophancy signal that is condition-invariant — it is identical across all four system prompts — and is sufficient to produce ceiling-level sycophancy regardless of evaluation context framing.
+
+This is a **two-level cue problem**: the benchmark embeds evaluation-relevant signals both in the system-prompt framing (the manipulation target) and in the task prompt itself (an uncontrolled confound). The biographical cue dominates, masking any potential system-prompt condition effect.
+
+**This finding is itself a construct validity result**: a benchmark that produces ceiling sycophancy because its task prompts explicitly request agreement is not measuring sycophantic tendency as a model property — it is measuring instruction-following. This is detectable in the raw data without any condition manipulation.
+
+The results shown in `data/responses.jsonl` and `results/` in this repository are from the **Llama-3.3-70B pilot run** via Together AI, as it represents the highest-capability model tested and is the target model for the full experiment.
+
+---
+
 ## Setup
 
 ```bash
 git clone <this-repo>
 cd alignment_validity_experiment
 pip install -r requirements.txt
-export ANTHROPIC_API_KEY=your_key_here
 ```
+
+Create a `.env` file in the project root:
+
+```
+# For Together AI backend (Llama 3.3 70B — recommended)
+TOGETHER_API_KEY=your_together_api_key_here
+
+# For local HuggingFace backend (optional, only needed for gated models)
+# HF_TOKEN=your_hf_token_here
+
+# Optional: custom cache dir for HuggingFace weights
+# HF_CACHE_DIR=/path/to/your/cache
+```
+
+Get a Together AI API key at: https://api.together.xyz/settings/api-keys
 
 ---
 
 ## Running the experiment
 
-**Pilot run** (50 items × 3 sources × 4 conditions = 600 API calls, ~$0.50):
+### Together AI backend — Llama 3.3 70B (recommended)
+
+**Pilot** (50 items × 3 sources × 4 conditions = 600 API calls, ~$0.50):
 ```bash
 python main.py --pilot
 ```
@@ -29,15 +65,31 @@ python main.py --pilot
 python main.py --full
 ```
 
-**With extended conditions** (adds 5th condition to disentangle register from inference):
+### Local backend — Qwen capability baseline (requires GPU)
+
+**Qwen2.5-3B** (requires ~8GB VRAM):
+```bash
+python main.py --pilot --backend local --model Qwen/Qwen2.5-3B-Instruct
+```
+
+**Qwen2.5-7B** (requires ~16GB VRAM):
+```bash
+python main.py --pilot --backend local --model Qwen/Qwen2.5-7B-Instruct
+```
+
+### Other options
+
+**With extended conditions** (adds 5th condition to disentangle register from evaluation inference):
 ```bash
 python main.py --pilot --extended-conditions
 ```
 
-**Analyze existing data without re-running API calls:**
+**Analyze existing data without re-running inference:**
 ```bash
 python main.py --analyze-only
 ```
+
+It is always safe to interrupt (Ctrl+C) and re-run — progress is saved and resumed automatically.
 
 ---
 
@@ -55,18 +107,21 @@ All tests run without an API key (no network calls in tests).
 
 ```
 alignment_validity_experiment/
-├── main.py                    # Entry point
+├── main.py                    # Entry point — supports --backend together/local
 ├── requirements.txt
+├── .env.example               # Template for API keys
 ├── data/
 │   ├── loader.py              # Dataset loading and condition generation
-│   └── raw/                   # Downloaded JSONL files (auto-created)
+│   ├── raw/                   # Downloaded JSONL files (auto-created)
+│   └── responses.jsonl        # Raw model responses (example: Llama 70B pilot)
 ├── inference/
-│   └── model_runner.py        # Anthropic API calls with retry logic
+│   └── model_runner.py        # Together AI API + local HuggingFace, both supported
 ├── coding/
 │   └── rater.py               # Response coding and inter-rater reliability
 ├── analysis/
-│   ├── stats.py               # ANOVA, effect sizes, summary statistics
+│   ├── stats.py               # ANOVA, effect sizes, CRS — all saved to results/
 │   └── plots.py               # All figures (4 plots)
+├── results/                   # CSV outputs from analysis (auto-created)
 ├── tests/
 │   └── test_all.py            # Unit tests for all modules
 └── plots/                     # Generated figures (auto-created)
@@ -95,20 +150,27 @@ Optional 5th condition (run with `--extended-conditions`):
 
 **Core test:** Repeated-measures ANOVA across conditions; planned contrast A vs B. Significant difference = evidence of construct validity failure.
 
-**Secondary measure:** Proportion of responses containing explicit evaluation-context references — distinguishes strategic inference from shallow register-matching.
+**Secondary measure:** Proportion of responses containing explicit evaluation-context references.
 
-**Success criterion:** p < 0.05 (Bonferroni corrected) with Cohen's d > 0.3 between Conditions A and B.
+**Output metric:** Context Robustness Score (CRS) = normalised range in sycophancy rate across conditions (max − min). Saved to `results/context_robustness_score.csv`.
+
+**Success criterion:** p < 0.05 (Bonferroni corrected) with Cohen's d > 0.3 between Conditions A and B, on items without strong biographical cue confounds.
 
 ---
 
-## Output
+## CSV outputs (saved to `results/`)
 
-- `data/responses.jsonl` — raw API responses (resumable)
-- `data/coded_responses.jsonl` — coded responses with sycophancy labels
-- `plots/fig1_sycophancy_rates.png` — sycophancy rates by condition (main result)
-- `plots/fig2_condition_comparison.png` — within-item A vs B comparison
-- `plots/fig3_evaluation_references.png` — secondary measure
-- `plots/fig4_by_source.png` — results split by domain (philpapers / nlp / political)
+After each run, the following CSV files are saved automatically:
+
+| File | Contents |
+|------|----------|
+| `sycophancy_rates.csv` | Rate per condition + SE + 95% CI |
+| `effect_sizes.csv` | Cohen's d for A vs B |
+| `anova_results.csv` | Full RM-ANOVA table |
+| `posthoc_tests.csv` | Pairwise comparisons, Bonferroni corrected |
+| `item_variance.csv` | Per-item variance across conditions |
+| `context_robustness_score.csv` | CRS metric |
+| `full_summary.csv` | All metrics in one table |
 
 ---
 
